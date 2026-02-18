@@ -1,0 +1,8 @@
+
+{
+  "name": "SmartSummarize – AI Study Notes Assistant",
+  "description": "An industry-level AI application that converts long study notes into structured, easy-to-understand summaries using Gemini AI. Supports text, PDF, and voice inputs.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
