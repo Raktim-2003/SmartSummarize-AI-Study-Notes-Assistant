@@ -1,41 +1,51 @@
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
-import { GoogleGenAI } from "@google/genai";
-import { SummaryStyle } from "./types";
+function localSummary(text: string) {
+  const sentences = text.split(".");
 
-const MODEL_NAME = "gemini-3-flash-preview";
+  return sentences.slice(0, 3).join(".") + ".";
+}
 
-export const generateSummary = async (text: string, style: SummaryStyle): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
-  
-  const stylePrompts: Record<SummaryStyle, string> = {
-    concise: "Provide a high-level, short, and concise summary focusing only on the most critical points.",
-    detailed: "Provide a comprehensive and detailed summary that covers all major sub-topics and nuances.",
-    bullets: "Provide a structured summary using only bullet points. Organize them logically.",
-    teacher: "Explain this like a helpful teacher would to a student. Use analogies, simplify complex terms, and be encouraging."
-  };
+export const generateSummary = async (
+  text: string,
 
-  const systemInstruction = `You are a world-class academic assistant specialized in creating study notes. 
-  Your goal is to help students understand complex topics quickly. 
-  Output your response in clean Markdown format. 
-  ${stylePrompts[style]}`;
-
+  style: string,
+): Promise<string> => {
   try {
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: text,
-      config: {
-        systemInstruction,
-        temperature: 0.7,
-      },
-    });
-
-    if (!response.text) {
-      throw new Error("Empty response from AI");
+    if (!API_KEY) {
+      return localSummary(text);
     }
 
-    return response.text;
-  } catch (error) {
-    console.error("Gemini API Error:", error);
-    throw new Error("Failed to generate summary. Please check your internet connection and try again.");
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
+
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text }],
+            },
+          ],
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      return localSummary(text);
+    }
+
+    const data = await response.json();
+
+    return (
+      data.candidates?.[0]?.content?.parts?.[0]?.text || localSummary(text)
+    );
+  } catch {
+    return localSummary(text);
   }
 };
